@@ -18,7 +18,7 @@ namespace SamplePlugin
         {
             try
             {
-                Console.WriteLine("[Info] Starting HelloRevitCommand VERSION 4.0 - TESTING APPLICATIONPLUGINS HOT-RELOAD!");
+                Console.WriteLine("[Info] Starting HelloRevitCommand VERSION 5.0 - FINAL HOT-RELOAD TEST!");
                 
                 var doc = app.ActiveUIDocument?.Document;
                 
@@ -67,7 +67,7 @@ namespace SamplePlugin
                 _customData["levelCount"] = levelCount;
                 _customData["revitVersion"] = app.Application.VersionNumber;
 
-                message = $"🚀 ApplicationPlugins HOT-RELOAD CONFIRMED! Document: {docTitle}, Elements: {totalElements} [v4.0]";
+                message = $"✅ PRODUCTION READY! Hot-reload works perfectly! Document: {docTitle}, Elements: {totalElements} [v5.0]";
                 Console.WriteLine($"[Success] {message}");
 
                 return Result.Succeeded;

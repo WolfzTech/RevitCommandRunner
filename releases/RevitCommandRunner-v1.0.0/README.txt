@@ -1,6 +1,15 @@
-# RevitCommandRunner v1.0.0
+# RevitCommandRunner v1.0.0 - Installer Package
 
 AI-driven command execution framework for Autodesk Revit with hot-reload support.
+
+## Installation
+
+**Run Installer.exe** - That's it!
+
+The installer will:
+- Install the bundle to ApplicationPlugins
+- Register in Windows Programs & Features
+- Include MCP server with dependencies
 
 ## Supported Revit Versions
 
@@ -8,105 +17,68 @@ AI-driven command execution framework for Autodesk Revit with hot-reload support
 - Revit 2025-2026 (.NET 8.0)
 - Revit 2027 (.NET 10.0)
 
-## Installation
+## After Installation
 
-### Quick Install
+### Configure AI Agent (Optional)
 
-1. Run `Installer.exe`
-2. Start Revit
-3. The add-in will load automatically
-
-PowerShell alternative: run `Install.ps1`.
-
-### Manual Install
-
-1. Copy the appropriate DLL from `RevitCommandRunner.bundle\Contents\[YEAR]\` to:
-   `%APPDATA%\Autodesk\Revit\Addins\[YEAR]\`
-
-2. Copy `RevitCommandRunner.addin` to the same folder
-
-3. Start Revit
-
-## Configuration
-
-The add-in creates a configuration file at:
-`%LOCALAPPDATA%\RevitCommandRunner\config.json`
-
-Default settings:
-- Command queue polling: 500ms
-- Console log capture: Enabled
-- Queue file: `%LOCALAPPDATA%\RevitCommandRunner\command-queue.json`
-
-## Usage
-
-### With MCP Server (OpenCode/Claude)
-
-Configure the MCP server in your AI tool:
-
+**For OpenCode:**
+Edit `%USERPROFILE%\.config\opencode\opencode.jsonc`:
 ``json
 {
-  "mcpServers": {
+  "mcp": {
     "revit-command-runner": {
-      "command": "node",
-      "args": ["D:/RevitCommandRunner/mcp-server/build/index.js"]
+      "type": "local",
+      "command": [
+        "node",
+        "%APPDATA%/Autodesk/ApplicationPlugins/RevitCommandRunner.bundle/mcp-server/index.js"
+      ],
+      "enabled": true
     }
   }
 }
 ``
 
-Then ask your AI assistant:
-- "Execute HelloRevitCommand from the sample plugin"
-- "Build and test my Revit plugin"
-- "Create 5 walls in the active document"
-
-### With PowerShell
-
-``powershell
-Import-Module D:\RevitCommandRunner\tools\RevitCommandRunner.psm1
-
-$result = Invoke-RevitCommand `
-    -DllPath "C:\MyPlugin\bin\Debug\MyPlugin.dll" `
-    -CommandClassName "MyNamespace.MyCommand"
-
-Write-Host $result.message
+**For Claude Desktop:**
+Edit `%APPDATA%\Claude\claude_desktop_config.json`:
+``json
+{
+  "mcpServers": {
+    "revit-command-runner": {
+      "command": "node",
+      "args": ["%APPDATA%/Autodesk/ApplicationPlugins/RevitCommandRunner.bundle/mcp-server/index.js"]
+    }
+  }
+}
 ``
 
-## Hot-Reload
+### Start Revit
 
-RevitCommandRunner supports hot-reload for user plugins:
+The add-in loads automatically. No dialogs, no UI.
 
-1. Run your command
-2. Modify your code
-3. Rebuild (Revit still running!)
-4. Run again - changes applied immediately
+## Uninstallation
 
-No Revit restart needed!
+**Option 1:** Windows Settings → Apps → RevitCommandRunner → Uninstall
 
-## Sample Plugin
-
-See `samples\SamplePlugin\` for example commands:
-- **HelloRevitCommand**: Read document info
-- **CreateWallsCommand**: Create walls with transactions
+**Option 2:** Run `Installer.exe --uninstall`
 
 ## Documentation
 
-- **README.md**: Overview and features
-- **USAGE_GUIDE.md**: Quick reference for AI usage
-- **HOT_RELOAD_EXPLAINED.md**: Technical details on hot-reload
+See the included documentation files for detailed information:
+- README.md - Full documentation
+- INSTALLATION.md - Installation guide
+- USAGE_GUIDE.md - Usage examples
+- HOT_RELOAD_EXPLAINED.md - How hot-reload works
+- ASSEMBLY_UNLOADING.md - Technical details
+
+## Sample Plugin
+
+The `samples/SamplePlugin` directory contains example commands you can use as a starting point.
 
 ## Support
 
 - GitHub: https://github.com/yourusername/RevitCommandRunner
 - Issues: https://github.com/yourusername/RevitCommandRunner/issues
 
-## License
+---
 
-MIT License - See LICENSE file for details
-
-## Version History
-
-### v1.0.0
-- Multi-version support (Revit 2021-2027)
-- Hot-reload via collectible AssemblyLoadContext on Revit 2025+ and Assembly.Load(bytes) fallback on older Revit
-- MCP server integration
-- Sample plugins included
+**Quick Start:** Run Installer.exe, configure your AI agent, start Revit!

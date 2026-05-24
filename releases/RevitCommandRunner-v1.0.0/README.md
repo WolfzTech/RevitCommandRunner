@@ -17,29 +17,39 @@ RevitCommandRunner enables AI agents (Claude Code, Cursor, etc.) to execute Revi
 
 ## Quick Start
 
-### 1. Build and Install
+### 1. Install
+
+**Option A: Using Installer.exe (Recommended)**
+
+1. Download and extract `RevitCommandRunner-v1.0.0.zip`
+2. Run `Installer.exe`
+3. Start Revit - the add-in loads automatically
+
+**Option B: Build from Source**
 
 ```powershell
-# Build the framework
-cd D:\RevitCommandRunner
-dotnet build src\RevitCommandRunner\RevitCommandRunner.csproj
+# Clone or download the repository
+cd <YOUR_PATH>\RevitCommandRunner
 
-# Add-in manifest is already at:
-# C:\ProgramData\Autodesk\Revit\Addins\2025\RevitCommandRunner.addin
+# Build all Revit versions (2021-2027)
+cd src\RevitCommandRunner
+.\Build-AllVersions.ps1 -Configuration Release
 
-# Start Revit - you'll see "Command runner started" dialog
+# Install
+cd ..\..\installer
+.\Install.ps1
 ```
 
-### 2. Choose Your Interface
+The add-in will be installed to:
+`%APPDATA%\Autodesk\ApplicationPlugins\RevitCommandRunner.bundle`
+
+### 2. Setup MCP Server (for AI Integration)
+
+The MCP server is included in the bundle - no separate build needed!
+
+### 3. Configure Your AI Agent
 
 **Option A: MCP Server (Recommended for AI agents)**
-
-```bash
-# Install and build MCP server
-cd mcp-server
-npm install
-npm run build
-```
 
 **For OpenCode:**
 Add to `%USERPROFILE%\.config\opencode\opencode.jsonc`:
@@ -50,7 +60,7 @@ Add to `%USERPROFILE%\.config\opencode\opencode.jsonc`:
       "type": "local",
       "command": [
         "node",
-        "D:/RevitCommandRunner/mcp-server/dist/index.js"
+        "%APPDATA%/Autodesk/ApplicationPlugins/RevitCommandRunner.bundle/mcp-server/index.js"
       ],
       "enabled": true
     }
@@ -65,11 +75,13 @@ Add to `%APPDATA%\Claude\claude_desktop_config.json`:
   "mcpServers": {
     "revit-command-runner": {
       "command": "node",
-      "args": ["D:/RevitCommandRunner/mcp-server/dist/index.js"]
+      "args": ["%APPDATA%/Autodesk/ApplicationPlugins/RevitCommandRunner.bundle/mcp-server/index.js"]
     }
   }
 }
 ```
+
+**Note**: The MCP server is bundled with the installer. After running `Installer.exe`, just configure your AI agent with the path above.
 
 **Note**: OpenCode and Claude Desktop use different config formats. Restart your AI agent after config changes.
 
@@ -80,12 +92,12 @@ See [mcp-server/README.md](mcp-server/README.md) for detailed MCP configuration 
 **Option B: PowerShell Module (Direct scripting)**
 
 ```powershell
-# Import the PowerShell module
-Import-Module D:\RevitCommandRunner\tools\RevitCommandRunner.psm1
+# Import the PowerShell module (adjust path to your installation)
+Import-Module <YOUR_PATH>\RevitCommandRunner\tools\RevitCommandRunner.psm1
 
 # Execute your command
 $result = Invoke-RevitCommand `
-    -DllPath "D:\MyPlugin\bin\Debug\MyPlugin.dll" `
+    -DllPath "C:\MyPlugin\bin\Debug\MyPlugin.dll" `
     -CommandClassName "MyPlugin.MyCommand"
 
 # Check result
@@ -96,7 +108,7 @@ if ($result.success) {
 }
 ```
 
-### 3. AI Development Loop
+### 4. AI Development Loop
 
 ```powershell
 while ($true) {
@@ -273,7 +285,22 @@ public class MyCommand : IExternalCommand
 
 **Note:** The framework attempts to create ExternalCommandData via reflection, but this may fail due to Revit API limitations. Use `IExternalCommandWithUIApp` for guaranteed compatibility.
 
-## Dependencies
+## Uninstallation
+
+**Option 1: From Windows Settings**
+- Open Settings → Apps → Installed apps
+- Search for "RevitCommandRunner"
+- Click Uninstall
+
+**Option 2: Run uninstaller**
+```powershell
+.\Installer.exe --uninstall
+```
+
+**Option 3: Manual removal**
+```
+%APPDATA%\Autodesk\ApplicationPlugins\RevitCommandRunner.bundle
+```
 
 Commands with external dependencies (NuGet packages, other DLLs) work automatically. The framework resolves dependencies from your command DLL's original directory, so hot-reload doesn't break dependency loading.
 

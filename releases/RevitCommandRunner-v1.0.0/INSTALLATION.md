@@ -131,13 +131,15 @@ The installer only installs the Revit add-in. To let an AI agent call Revit, con
          "type": "local",
          "command": [
            "node",
-           "D:/RevitCommandRunner/mcp-server/dist/index.js"
+           "%APPDATA%/Autodesk/ApplicationPlugins/RevitCommandRunner.bundle/mcp-server/index.js"
          ],
          "enabled": true
        }
      }
    }
    ```
+   
+   **Note**: The MCP server is installed automatically with the bundle. No separate download needed!
 
 3. **Restart OpenCode**
 
@@ -149,11 +151,13 @@ Edit: `%APPDATA%\Claude\claude_desktop_config.json`
   "mcpServers": {
     "revit-command-runner": {
       "command": "node",
-      "args": ["D:/RevitCommandRunner/mcp-server/dist/index.js"]
+      "args": ["%APPDATA%/Autodesk/ApplicationPlugins/RevitCommandRunner.bundle/mcp-server/index.js"]
     }
   }
 }
 ```
+
+**Note**: The MCP server is installed automatically with the bundle. No separate download needed!
 
 ## Uninstallation
 

@@ -3,6 +3,10 @@ namespace RevitCommandRunnerInstaller;
 internal static class Program
 {
     private const string BundleName = "RevitCommandRunner.bundle";
+    private const string AppName = "RevitCommandRunner";
+    private const string AppVersion = "1.0.0";
+    private const string Publisher = "WolfzTech";
+    private const string UninstallRegKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\RevitCommandRunner";
 
     private static int Main(string[] args)
     {
@@ -43,6 +47,10 @@ internal static class Program
                 {
                     WriteStatus("Bundle", "Not installed", ConsoleColor.DarkGray);
                 }
+                
+                // Unregister from Windows Programs & Features
+                UnregisterFromControlPanel();
+                WriteStatus("Registry", "Unregistered from Programs & Features", ConsoleColor.Green);
             }
             else
             {
@@ -55,6 +63,10 @@ internal static class Program
                 File.Copy(sourcePackageContents, Path.Combine(destinationBundle, "PackageContents.xml"), overwrite: true);
 
                 WriteStatus("Bundle", $"Installed to {destinationBundle}", ConsoleColor.Green);
+                
+                // Register in Windows Programs & Features
+                RegisterInControlPanel(destinationBundle);
+                WriteStatus("Registry", "Registered in Programs & Features", ConsoleColor.Green);
             }
 
             Console.WriteLine();
@@ -72,6 +84,56 @@ internal static class Program
         Console.ReadKey(intercept: true);
 
         return 0;
+    }
+
+    private static void RegisterInControlPanel(string installPath)
+    {
+        using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(UninstallRegKey);
+        if (key == null) return;
+
+        key.SetValue("DisplayName", AppName);
+        key.SetValue("DisplayVersion", AppVersion);
+        key.SetValue("Publisher", Publisher);
+        key.SetValue("InstallLocation", installPath);
+        key.SetValue("UninstallString", $"\"{Environment.ProcessPath}\" --uninstall");
+        key.SetValue("DisplayIcon", Environment.ProcessPath ?? "");
+        key.SetValue("NoModify", 1, Microsoft.Win32.RegistryValueKind.DWord);
+        key.SetValue("NoRepair", 1, Microsoft.Win32.RegistryValueKind.DWord);
+        
+        // Calculate size
+        long size = GetDirectorySize(installPath);
+        key.SetValue("EstimatedSize", (int)(size / 1024), Microsoft.Win32.RegistryValueKind.DWord); // Size in KB
+    }
+
+    private static void UnregisterFromControlPanel()
+    {
+        try
+        {
+            Microsoft.Win32.Registry.CurrentUser.DeleteSubKey(UninstallRegKey, throwOnMissingSubKey: false);
+        }
+        catch
+        {
+            // Ignore errors during unregister
+        }
+    }
+
+    private static long GetDirectorySize(string path)
+    {
+        if (!Directory.Exists(path)) return 0;
+        
+        long size = 0;
+        foreach (string file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
+        {
+            try
+            {
+                size += new FileInfo(file).Length;
+            }
+            catch
+            {
+                // Ignore inaccessible files
+            }
+        }
+        return size;
     }
 
     private static string FindBundleDirectory(string baseDir)
