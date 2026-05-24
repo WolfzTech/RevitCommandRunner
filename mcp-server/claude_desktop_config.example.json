@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "revit-command-runner": {
+      "command": "node",
+      "args": ["D:/RevitCommandRunner/mcp-server/dist/index.js"]
+    }
+  }
+}
