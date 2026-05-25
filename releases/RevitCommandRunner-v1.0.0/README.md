@@ -81,6 +81,19 @@ Add to `%APPDATA%\Claude\claude_desktop_config.json`:
 }
 ```
 
+**For Antigravity:**
+Add to `%USERPROFILE%\.config\antigravity\config.json`:
+```json
+{
+  "mcpServers": {
+    "revit-command-runner": {
+      "command": "node",
+      "args": ["%APPDATA%/Autodesk/ApplicationPlugins/RevitCommandRunner.bundle/mcp-server/index.js"]
+    }
+  }
+}
+```
+
 **Note**: The MCP server is bundled with the installer. After running `Installer.exe`, just configure your AI agent with the path above.
 
 **Note**: OpenCode and Claude Desktop use different config formats. Restart your AI agent after config changes.

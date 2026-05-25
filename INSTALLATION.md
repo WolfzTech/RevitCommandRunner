@@ -159,6 +159,22 @@ Edit: `%APPDATA%\Claude\claude_desktop_config.json`
 
 **Note**: The MCP server is installed automatically with the bundle. No separate download needed!
 
+### For Antigravity
+
+Edit: `%USERPROFILE%\.config\antigravity\config.json`
+```json
+{
+  "mcpServers": {
+    "revit-command-runner": {
+      "command": "node",
+      "args": ["%APPDATA%/Autodesk/ApplicationPlugins/RevitCommandRunner.bundle/mcp-server/index.js"]
+    }
+  }
+}
+```
+
+**Note**: The MCP server is installed automatically with the bundle. No separate download needed!
+
 ## Uninstallation
 
 ### Automated
