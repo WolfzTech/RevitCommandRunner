@@ -5,7 +5,6 @@ build/
 *.dll
 *.exe
 *.pdb
-!installer/Installer.exe
 
 # Visual Studio
 .vs/
@@ -48,10 +47,6 @@ installer/bin/
 installer/obj/
 installer/RevitCommandRunnerInstaller/bin/
 installer/RevitCommandRunnerInstaller/obj/
-
-# WiX build artifacts
-installer/wix/*.wixobj
-installer/wix/*.wixpdb
 
 # Release packages
 releases/*.zip

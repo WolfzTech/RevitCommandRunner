@@ -43,7 +43,7 @@ Add to your OpenCode config file:
       "type": "local",
       "command": [
         "node",
-        "D:/RevitCommandRunner/mcp-server/dist/index.js"
+        "C:/Users/YourName/AppData/Roaming/Autodesk/ApplicationPlugins/RevitCommandRunner.bundle/mcp-server/index.js"
       ],
       "enabled": true
     }
@@ -51,9 +51,7 @@ Add to your OpenCode config file:
 }
 ```
 
-**Note**: OpenCode uses `"mcp"` (not `"mcpServers"`) and `"command"` is an array. Use forward slashes (`/`) in paths. After saving, restart OpenCode to load the MCP server.
-
-**Troubleshooting**: If you get "Unexpected server error", see [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for solutions.
+**Note**: Replace `YourName` with your Windows username. OpenCode uses `"mcp"` (not `"mcpServers"`) and `"command"` is an array. Use forward slashes (`/`) in paths. After saving, restart OpenCode to load the MCP server.
 
 ### For Claude Desktop
 
@@ -74,21 +72,25 @@ Add to your Claude Desktop config file:
 
 ### For Claude Code
 
-Add to your Claude Code config file under the project's `mcpServers` section:
+Add to your Claude Code global config file:
 
 **Windows**: `%USERPROFILE%\.claude.json`
 
 ```json
-"revit-command-runner": {
-  "type": "stdio",
-  "command": "node",
-  "args": [
-    "%APPDATA%/Autodesk/ApplicationPlugins/RevitCommandRunner.bundle/mcp-server/index.js"
-  ]
+{
+  "mcpServers": {
+    "revit-command-runner": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "C:/Users/YourName/AppData/Roaming/Autodesk/ApplicationPlugins/RevitCommandRunner.bundle/mcp-server/index.js"
+      ]
+    }
+  }
 }
 ```
 
-**Note**: The `"type": "stdio"` field is required for Claude Code. After saving, restart Claude Code to load the MCP server.
+**Note**: Replace `YourName` with your Windows username. The `"type": "stdio"` field is required for Claude Code. After saving, restart Claude Code to load the MCP server.
 
 ### For Antigravity
 

@@ -1,149 +1,259 @@
 namespace RevitCommandRunnerInstaller;
 
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
+using System.Windows;
+using System.Windows.Controls;
+using Microsoft.Win32;
+
 internal static class Program
 {
     private const string BundleName = "RevitCommandRunner.bundle";
     private const string AppName = "RevitCommandRunner";
-    private const string AppVersion = "1.0.1";
+    private const string AppVersion = "1.0.2";
     private const string Publisher = "WolfzTech";
     private const string UninstallRegKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\RevitCommandRunner";
 
+    [STAThread]
     private static int Main(string[] args)
     {
-        Console.Title = "RevitCommandRunner Installer";
-        bool uninstall = args.Any(a => a.Equals("/uninstall", StringComparison.OrdinalIgnoreCase)
-                                    || a.Equals("--uninstall", StringComparison.OrdinalIgnoreCase)
-                                    || a.Equals("-u", StringComparison.OrdinalIgnoreCase));
+        var uninstall = args.Any(a => a.Equals("/uninstall", StringComparison.OrdinalIgnoreCase)
+                                  || a.Equals("--uninstall", StringComparison.OrdinalIgnoreCase)
+                                  || a.Equals("-u", StringComparison.OrdinalIgnoreCase));
 
-        PrintHeader(uninstall);
-
-        string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        string applicationPluginsRoot = Path.Combine(appData, "Autodesk", "ApplicationPlugins");
-        string destinationBundle = Path.Combine(applicationPluginsRoot, BundleName);
-
-        try
-        {
-            if (uninstall)
-            {
-                if (Directory.Exists(destinationBundle))
-                {
-                    Directory.Delete(destinationBundle, recursive: true);
-                    WriteStatus("Bundle", "Uninstalled", ConsoleColor.Green);
-                }
-                else
-                {
-                    WriteStatus("Bundle", "Not installed", ConsoleColor.DarkGray);
-                }
-                
-                // Unregister from Windows Programs & Features
-                UnregisterFromControlPanel();
-                WriteStatus("Registry", "Unregistered from Programs & Features", ConsoleColor.Green);
-            }
-            else
-            {
-                // Try embedded resource first, fallback to external files
-                bool extracted = TryExtractEmbeddedBundle(applicationPluginsRoot, destinationBundle);
-                
-                if (!extracted)
-                {
-                    // Fallback: look for bundle in same directory (for development)
-                    string baseDir = AppContext.BaseDirectory;
-                    string sourceBundle = FindBundleDirectory(baseDir);
-                    string sourcePackageContents = FindPackageContentsPath(baseDir);
-
-                    if (!Directory.Exists(sourceBundle))
-                        return Fail("Bundle not found. This installer should contain an embedded bundle.");
-
-                    if (!File.Exists(sourcePackageContents))
-                        return Fail("PackageContents.xml not found.");
-
-                    Directory.CreateDirectory(applicationPluginsRoot);
-
-                    if (Directory.Exists(destinationBundle))
-                        Directory.Delete(destinationBundle, recursive: true);
-
-                    CopyDirectory(sourceBundle, destinationBundle);
-                    File.Copy(sourcePackageContents, Path.Combine(destinationBundle, "PackageContents.xml"), overwrite: true);
-
-                    WriteStatus("Bundle", $"Installed to {destinationBundle}", ConsoleColor.Green);
-                }
-                
-                // Register in Windows Programs & Features
-                RegisterInControlPanel(destinationBundle);
-                WriteStatus("Registry", "Registered in Programs & Features", ConsoleColor.Green);
-            }
-
-            Console.WriteLine();
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine(uninstall ? "Uninstall completed." : "Installation completed. Start Revit to load RevitCommandRunner.");
-            Console.ResetColor();
-        }
-        catch (Exception ex)
-        {
-            return Fail(ex.Message);
-        }
-
-        Console.WriteLine();
-        Console.WriteLine("Press any key to exit...");
-        Console.ReadKey(intercept: true);
-
-        return 0;
+        var app = new Application { ShutdownMode = ShutdownMode.OnMainWindowClose };
+        var window = new InstallerWindow(uninstall);
+        app.Run(window);
+        return window.ExitCode;
     }
 
-    private static bool TryExtractEmbeddedBundle(string applicationPluginsRoot, string destinationBundle)
+    private sealed class InstallerWindow : Window
     {
+        private readonly bool _uninstall;
+        private readonly ListBox _log = new();
+        private readonly CheckBox _claudeCode = new() { Content = "Claude Code", IsChecked = true };
+        private readonly CheckBox _openCode = new() { Content = "OpenCode", IsChecked = true };
+        private readonly CheckBox _antigravity = new() { Content = "Antigravity", IsChecked = true };
+        private readonly Button _primary = new() { Width = 110, Height = 30 };
+        private readonly Button _close = new() { Content = "Close", Width = 90, Height = 30, IsEnabled = true };
+
+        public int ExitCode { get; private set; }
+
+        public InstallerWindow(bool uninstall)
+        {
+            _uninstall = uninstall;
+            Title = uninstall ? "RevitCommandRunner Uninstaller" : "RevitCommandRunner Installer";
+            Width = 620;
+            Height = uninstall ? 390 : 470;
+            MinWidth = 560;
+            MinHeight = uninstall ? 340 : 430;
+            WindowStartupLocation = WindowStartupLocation.CenterScreen;
+
+            var root = new Grid { Margin = new Thickness(18) };
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            var title = new TextBlock
+            {
+                Text = uninstall ? "Uninstall RevitCommandRunner" : "Install RevitCommandRunner",
+                FontSize = 20,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            root.Children.Add(title);
+
+            if (!uninstall)
+            {
+                var mcpBox = new GroupBox { Header = "Configure MCP clients", Margin = new Thickness(0, 0, 0, 12) };
+                var checks = new StackPanel { Margin = new Thickness(10) };
+                checks.Children.Add(new TextBlock { Text = "Selected clients will receive or update the revit-command-runner MCP config.", Margin = new Thickness(0, 0, 0, 8) });
+                checks.Children.Add(_claudeCode);
+                checks.Children.Add(_openCode);
+                checks.Children.Add(_antigravity);
+                mcpBox.Content = checks;
+                Grid.SetRow(mcpBox, 1);
+                root.Children.Add(mcpBox);
+            }
+
+            _log.Margin = new Thickness(0, 0, 0, 12);
+            _log.Focusable = false;
+            Grid.SetRow(_log, 2);
+            root.Children.Add(_log);
+
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            _primary.Content = uninstall ? "Uninstall" : "Install";
+            _primary.Margin = new Thickness(0, 0, 10, 0);
+            _primary.Click += async (_, _) => await RunAsync();
+            _close.Click += (_, _) => Close();
+            buttons.Children.Add(_primary);
+            buttons.Children.Add(_close);
+            Grid.SetRow(buttons, 3);
+            root.Children.Add(buttons);
+
+            Content = root;
+        }
+
+        private async System.Threading.Tasks.Task RunAsync()
+        {
+            _primary.IsEnabled = false;
+            _close.IsEnabled = false;
+            ExitCode = 0;
+
+            try
+            {
+                await System.Threading.Tasks.Task.Run(() =>
+                {
+                    var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                    var applicationPluginsRoot = Path.Combine(appData, "Autodesk", "ApplicationPlugins");
+                    var destinationBundle = Path.Combine(applicationPluginsRoot, BundleName);
+
+                    if (_uninstall)
+                    {
+                        Uninstall(destinationBundle, Log);
+                    }
+                    else
+                    {
+                        Install(applicationPluginsRoot, destinationBundle, Log);
+                    }
+                });
+
+                if (!_uninstall)
+                    ConfigureSelectedMcpClients();
+
+                Log(_uninstall ? "Uninstall completed." : "Installation completed. Start Revit to load RevitCommandRunner.");
+            }
+            catch (Exception ex)
+            {
+                ExitCode = 1;
+                Log("ERROR: " + ex.Message);
+            }
+            finally
+            {
+                _close.IsEnabled = true;
+            }
+        }
+
+        private void ConfigureSelectedMcpClients()
+        {
+            if (_claudeCode.IsChecked == true)
+            {
+                TryConfigureClient("Claude Code", UpsertClaudeCode);
+            }
+            if (_openCode.IsChecked == true)
+            {
+                TryConfigureClient("OpenCode", UpsertOpenCode);
+            }
+            if (_antigravity.IsChecked == true)
+            {
+                TryConfigureClient("Antigravity", UpsertAntigravity);
+            }
+        }
+
+        private void TryConfigureClient(string name, Action configure)
+        {
+            try
+            {
+                configure();
+                Log($"MCP: {name} configured.");
+            }
+            catch (Exception ex)
+            {
+                Log($"MCP: {name} skipped. Config file could not be parsed: {ex.Message}");
+            }
+        }
+
+        private void Log(string message)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _log.Items.Add(message);
+                _log.ScrollIntoView(message);
+            });
+        }
+    }
+
+    private static void Install(string applicationPluginsRoot, string destinationBundle, Action<string> log)
+    {
+        log("Extracting embedded bundle...");
+        ExtractEmbeddedBundle(applicationPluginsRoot, destinationBundle, log);
+        RegisterInControlPanel(destinationBundle);
+        log("Registered in Programs & Features.");
+    }
+
+    private static void Uninstall(string destinationBundle, Action<string> log)
+    {
+        if (Directory.Exists(destinationBundle))
+        {
+            Directory.Delete(destinationBundle, recursive: true);
+            log("Bundle uninstalled.");
+        }
+        else
+        {
+            log("Bundle was not installed.");
+        }
+
+        UnregisterFromControlPanel();
+        log("Unregistered from Programs & Features.");
+    }
+
+    private static void ExtractEmbeddedBundle(string applicationPluginsRoot, string destinationBundle, Action<string> log)
+    {
+        string? tempZip = null;
         try
         {
             var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-            var resourceName = assembly.GetManifestResourceNames()
-                .FirstOrDefault(r => r.EndsWith("bundle.zip", StringComparison.OrdinalIgnoreCase));
-
+            var resourceName = assembly.GetManifestResourceNames().FirstOrDefault(r => r.EndsWith("bundle.zip", StringComparison.OrdinalIgnoreCase));
             if (resourceName == null)
-                return false;
-
-            WriteStatus("Extracting", "Embedded bundle...", ConsoleColor.Yellow);
+                throw new InvalidOperationException("Embedded bundle.zip was not found.");
 
             Directory.CreateDirectory(applicationPluginsRoot);
 
             if (Directory.Exists(destinationBundle))
-                Directory.Delete(destinationBundle, recursive: true);
+            {
+                try
+                {
+                    Directory.Delete(destinationBundle, recursive: true);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"Cannot replace existing bundle. Close Revit and retry. Details: {ex.Message}");
+                }
+            }
 
-            using var stream = assembly.GetManifestResourceStream(resourceName);
-            if (stream == null)
-                return false;
-
-            // Extract ZIP directly to ApplicationPlugins
-            // The ZIP contains "RevitCommandRunner.bundle" folder with PackageContents.xml inside
-            string tempZip = Path.Combine(Path.GetTempPath(), "RevitCommandRunner-bundle.zip");
+            using var stream = assembly.GetManifestResourceStream(resourceName) ?? throw new InvalidOperationException("Embedded bundle stream could not be opened.");
+            tempZip = Path.Combine(Path.GetTempPath(), $"RevitCommandRunner-bundle-{Guid.NewGuid():N}.zip");
             using (var fileStream = File.Create(tempZip))
             {
                 stream.CopyTo(fileStream);
             }
 
-            // Extract ZIP - it will create ApplicationPlugins/RevitCommandRunner.bundle/
-            System.IO.Compression.ZipFile.ExtractToDirectory(tempZip, applicationPluginsRoot, overwriteFiles: true);
-            File.Delete(tempZip);
+            ZipFile.ExtractToDirectory(tempZip, applicationPluginsRoot, overwriteFiles: true);
 
-            // Verify extraction
             if (!Directory.Exists(destinationBundle))
-            {
-                WriteStatus("Error", "Bundle extraction failed", ConsoleColor.Red);
-                return false;
-            }
+                throw new InvalidOperationException("Bundle extraction failed.");
 
-            WriteStatus("Bundle", $"Installed to {destinationBundle}", ConsoleColor.Green);
-            return true;
+            log($"Bundle installed to {destinationBundle}");
         }
-        catch (Exception ex)
+        finally
         {
-            WriteStatus("Error", $"Extraction failed: {ex.Message}", ConsoleColor.Red);
-            return false;
+            if (!string.IsNullOrWhiteSpace(tempZip) && File.Exists(tempZip))
+            {
+                try { File.Delete(tempZip); } catch { }
+            }
         }
     }
 
     private static void RegisterInControlPanel(string installPath)
     {
-        using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(UninstallRegKey);
+        using var key = Registry.CurrentUser.CreateSubKey(UninstallRegKey);
         if (key == null) return;
 
         key.SetValue("DisplayName", AppName);
@@ -152,111 +262,120 @@ internal static class Program
         key.SetValue("InstallLocation", installPath);
         key.SetValue("UninstallString", $"\"{Environment.ProcessPath}\" --uninstall");
         key.SetValue("DisplayIcon", Environment.ProcessPath ?? "");
-        key.SetValue("NoModify", 1, Microsoft.Win32.RegistryValueKind.DWord);
-        key.SetValue("NoRepair", 1, Microsoft.Win32.RegistryValueKind.DWord);
-        
-        // Calculate size
-        long size = GetDirectorySize(installPath);
-        key.SetValue("EstimatedSize", (int)(size / 1024), Microsoft.Win32.RegistryValueKind.DWord); // Size in KB
+        key.SetValue("NoModify", 1, RegistryValueKind.DWord);
+        key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
+        key.SetValue("EstimatedSize", (int)(GetDirectorySize(installPath) / 1024), RegistryValueKind.DWord);
     }
 
     private static void UnregisterFromControlPanel()
     {
-        try
-        {
-            Microsoft.Win32.Registry.CurrentUser.DeleteSubKey(UninstallRegKey, throwOnMissingSubKey: false);
-        }
-        catch
-        {
-            // Ignore errors during unregister
-        }
+        try { Registry.CurrentUser.DeleteSubKey(UninstallRegKey, throwOnMissingSubKey: false); } catch { }
     }
 
     private static long GetDirectorySize(string path)
     {
         if (!Directory.Exists(path)) return 0;
-        
         long size = 0;
-        foreach (string file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
+        foreach (var file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
         {
-            try
-            {
-                size += new FileInfo(file).Length;
-            }
-            catch
-            {
-                // Ignore inaccessible files
-            }
+            try { size += new FileInfo(file).Length; } catch { }
         }
         return size;
     }
 
-    private static string FindBundleDirectory(string baseDir)
+    private static string InstalledMcpServerPath()
     {
-        string[] candidates =
-        [
-            Path.Combine(baseDir, BundleName),
-            Path.GetFullPath(Path.Combine(baseDir, "..", "build", BundleName)),
-            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "build", BundleName)),
-        ];
-
-        return candidates.FirstOrDefault(Directory.Exists) ?? candidates[0];
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Autodesk",
+            "ApplicationPlugins",
+            "RevitCommandRunner.bundle",
+            "mcp-server",
+            "index.js").Replace("\\", "/");
     }
 
-    private static string FindPackageContentsPath(string baseDir)
+    private static JsonObject BuildNodeServerNode()
     {
-        string[] candidates =
-        [
-            Path.Combine(baseDir, BundleName, "PackageContents.xml"),
-            Path.Combine(baseDir, "PackageContents.xml"),
-            Path.GetFullPath(Path.Combine(baseDir, "..", "PackageContents.xml")),
-            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "installer", "PackageContents.xml")),
-        ];
-
-        return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
-    }
-
-    private static void CopyDirectory(string sourceDir, string destinationDir)
-    {
-        Directory.CreateDirectory(destinationDir);
-
-        foreach (string directory in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
+        return new JsonObject
         {
-            string relative = Path.GetRelativePath(sourceDir, directory);
-            Directory.CreateDirectory(Path.Combine(destinationDir, relative));
-        }
+            ["type"] = "stdio",
+            ["command"] = "node",
+            ["args"] = new JsonArray(InstalledMcpServerPath())
+        };
+    }
 
-        foreach (string file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
+    private static JsonObject BuildAntigravityServerNode()
+    {
+        return new JsonObject
         {
-            string relative = Path.GetRelativePath(sourceDir, file);
-            File.Copy(file, Path.Combine(destinationDir, relative), overwrite: true);
-        }
+            ["type"] = "stdio",
+            ["command"] = "cmd",
+            ["args"] = new JsonArray("/c", "node", "%APPDATA%\\Autodesk\\ApplicationPlugins\\RevitCommandRunner.bundle\\mcp-server\\index.js")
+        };
     }
 
-    private static void PrintHeader(bool uninstall)
+    private static JsonObject BuildOpenCodeServerNode()
     {
-        Console.WriteLine("========================================");
-        Console.WriteLine(uninstall ? "RevitCommandRunner Uninstaller" : "RevitCommandRunner Installer");
-        Console.WriteLine("========================================");
-        Console.WriteLine();
+        return new JsonObject
+        {
+            ["type"] = "local",
+            ["command"] = new JsonArray("node", InstalledMcpServerPath()),
+            ["enabled"] = true
+        };
     }
 
-    private static void WriteStatus(string target, string message, ConsoleColor color)
+    private static JsonObject LoadJsonObject(string path, bool jsonc)
     {
-        Console.Write($"  {target} - ");
-        Console.ForegroundColor = color;
-        Console.WriteLine(message);
-        Console.ResetColor();
+        if (!File.Exists(path)) return new JsonObject();
+        var raw = File.ReadAllText(path);
+        if (string.IsNullOrWhiteSpace(raw)) return new JsonObject();
+
+        var documentOptions = jsonc
+            ? new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip }
+            : default;
+
+        return JsonNode.Parse(raw, nodeOptions: null, documentOptions)?.AsObject() ?? new JsonObject();
     }
 
-    private static int Fail(string message)
+    private static void SaveJson(string path, JsonObject root)
     {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine(message);
-        Console.ResetColor();
-        Console.WriteLine();
-        Console.WriteLine("Press any key to exit...");
-        Console.ReadKey(intercept: true);
-        return 1;
+        var dir = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(dir)) Directory.CreateDirectory(dir);
+        File.WriteAllText(path, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    private static JsonObject EnsureObject(JsonObject parent, string key)
+    {
+        if (parent[key] is JsonObject o) return o;
+        o = new JsonObject();
+        parent[key] = o;
+        return o;
+    }
+
+    private static void UpsertClaudeCode()
+    {
+        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude.json");
+        var root = LoadJsonObject(path, jsonc: true);
+        var mcpServers = EnsureObject(root, "mcpServers");
+        mcpServers["revit-command-runner"] = BuildNodeServerNode();
+        SaveJson(path, root);
+    }
+
+    private static void UpsertOpenCode()
+    {
+        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "opencode", "opencode.jsonc");
+        var root = LoadJsonObject(path, jsonc: true);
+        var mcp = EnsureObject(root, "mcp");
+        mcp["revit-command-runner"] = BuildOpenCodeServerNode();
+        SaveJson(path, root);
+    }
+
+    private static void UpsertAntigravity()
+    {
+        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".gemini", "antigravity", "mcp_config.json");
+        var root = LoadJsonObject(path, jsonc: true);
+        var mcpServers = EnsureObject(root, "mcpServers");
+        mcpServers["revit-command-runner"] = BuildAntigravityServerNode();
+        SaveJson(path, root);
     }
 }
