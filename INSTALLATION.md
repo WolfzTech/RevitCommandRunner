@@ -161,7 +161,7 @@ Edit: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ### For Antigravity
 
-Edit: `%USERPROFILE%\.config\antigravity\config.json`
+Edit: `%USERPROFILE%\.gemini\antigravity\mcp_config.json`
 ```json
 {
   "mcpServers": {

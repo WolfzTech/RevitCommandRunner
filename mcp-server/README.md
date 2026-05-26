@@ -76,7 +76,7 @@ Add to your Claude Desktop config file:
 
 Add to your Antigravity config file:
 
-**Windows**: `%USERPROFILE%\.config\antigravity\config.json`
+**Windows**: `%USERPROFILE%\.gemini\antigravity\mcp_config.json`
 
 ```json
 {

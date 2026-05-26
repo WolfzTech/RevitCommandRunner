@@ -53,9 +53,9 @@ installer/RevitCommandRunnerInstaller/obj/
 installer/wix/*.wixobj
 installer/wix/*.wixpdb
 
-# Release packages (optional - uncomment if you don't want to commit releases)
-# releases/*.zip
-# releases/RevitCommandRunner-v*/
+# Release packages
+releases/*.zip
+releases/RevitCommandRunner-v*/
 
 # MCP server
 mcp-server/node_modules/

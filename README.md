@@ -82,7 +82,7 @@ Add to `%APPDATA%\Claude\claude_desktop_config.json`:
 ```
 
 **For Antigravity:**
-Add to `%USERPROFILE%\.config\antigravity\config.json`:
+Add to `%USERPROFILE%\.gemini\antigravity\mcp_config.json`:
 ```json
 {
   "mcpServers": {
