@@ -81,6 +81,19 @@ Add to `%APPDATA%\Claude\claude_desktop_config.json`:
 }
 ```
 
+**For Claude Code:**
+Add to `%USERPROFILE%\.claude.json` under the project's `mcpServers` section:
+```json
+"revit-command-runner": {
+  "type": "stdio",
+  "command": "node",
+  "args": [
+    "%APPDATA%/Autodesk/ApplicationPlugins/RevitCommandRunner.bundle/mcp-server/index.js"
+  ]
+}
+```
+**Note**: The `"type": "stdio"` field is required for Claude Code.
+
 **For Antigravity:**
 Add to `%USERPROFILE%\.gemini\antigravity\mcp_config.json`:
 ```json

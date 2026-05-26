@@ -159,6 +159,21 @@ Edit: `%APPDATA%\Claude\claude_desktop_config.json`
 
 **Note**: The MCP server is installed automatically with the bundle. No separate download needed!
 
+### For Claude Code
+
+Edit: `%USERPROFILE%\.claude.json` under the project's `mcpServers` section:
+```json
+"revit-command-runner": {
+  "type": "stdio",
+  "command": "node",
+  "args": [
+    "%APPDATA%/Autodesk/ApplicationPlugins/RevitCommandRunner.bundle/mcp-server/index.js"
+  ]
+}
+```
+
+**Note**: The `"type": "stdio"` field is required for Claude Code. The MCP server is installed automatically with the bundle.
+
 ### For Antigravity
 
 Edit: `%USERPROFILE%\.gemini\antigravity\mcp_config.json`
