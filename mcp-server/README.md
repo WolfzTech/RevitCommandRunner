@@ -72,6 +72,29 @@ Add to your Claude Desktop config file:
 }
 ```
 
+### For Antigravity
+
+Add to your Antigravity config file:
+
+**Windows**: `%USERPROFILE%\.config\antigravity\config.json`
+
+```json
+{
+  "mcpServers": {
+    "revit-command-runner": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "node",
+        "%APPDATA%\\Autodesk\\ApplicationPlugins\\RevitCommandRunner.bundle\\mcp-server\\index.js"
+      ]
+    }
+  }
+}
+```
+
+**Note**: Use `cmd /c` to ensure environment variables like `%APPDATA%` are expanded correctly. After saving, restart Antigravity to load the MCP server.
+
 ### For Other MCP Clients
 
 Use the standard MCP stdio transport:

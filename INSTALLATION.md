@@ -166,8 +166,12 @@ Edit: `%USERPROFILE%\.config\antigravity\config.json`
 {
   "mcpServers": {
     "revit-command-runner": {
-      "command": "node",
-      "args": ["%APPDATA%/Autodesk/ApplicationPlugins/RevitCommandRunner.bundle/mcp-server/index.js"]
+      "command": "cmd",
+      "args": [
+        "/c",
+        "node",
+        "%APPDATA%\\Autodesk\\ApplicationPlugins\\RevitCommandRunner.bundle\\mcp-server\\index.js"
+      ]
     }
   }
 }

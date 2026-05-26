@@ -4,7 +4,7 @@ internal static class Program
 {
     private const string BundleName = "RevitCommandRunner.bundle";
     private const string AppName = "RevitCommandRunner";
-    private const string AppVersion = "1.0.0";
+    private const string AppVersion = "1.0.1";
     private const string Publisher = "WolfzTech";
     private const string UninstallRegKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\RevitCommandRunner";
 
@@ -16,19 +16,6 @@ internal static class Program
                                     || a.Equals("-u", StringComparison.OrdinalIgnoreCase));
 
         PrintHeader(uninstall);
-
-        string baseDir = AppContext.BaseDirectory;
-        string sourceBundle = FindBundleDirectory(baseDir);
-        string sourcePackageContents = FindPackageContentsPath(baseDir);
-
-        if (!uninstall)
-        {
-            if (!Directory.Exists(sourceBundle))
-                return Fail("Bundle not found. Run Installer.exe from the extracted release folder, or build the repo bundle first.");
-
-            if (!File.Exists(sourcePackageContents))
-                return Fail("PackageContents.xml not found. Run Installer.exe from the extracted release folder.");
-        }
 
         string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         string applicationPluginsRoot = Path.Combine(appData, "Autodesk", "ApplicationPlugins");
@@ -54,15 +41,32 @@ internal static class Program
             }
             else
             {
-                Directory.CreateDirectory(applicationPluginsRoot);
+                // Try embedded resource first, fallback to external files
+                bool extracted = TryExtractEmbeddedBundle(applicationPluginsRoot, destinationBundle);
+                
+                if (!extracted)
+                {
+                    // Fallback: look for bundle in same directory (for development)
+                    string baseDir = AppContext.BaseDirectory;
+                    string sourceBundle = FindBundleDirectory(baseDir);
+                    string sourcePackageContents = FindPackageContentsPath(baseDir);
 
-                if (Directory.Exists(destinationBundle))
-                    Directory.Delete(destinationBundle, recursive: true);
+                    if (!Directory.Exists(sourceBundle))
+                        return Fail("Bundle not found. This installer should contain an embedded bundle.");
 
-                CopyDirectory(sourceBundle, destinationBundle);
-                File.Copy(sourcePackageContents, Path.Combine(destinationBundle, "PackageContents.xml"), overwrite: true);
+                    if (!File.Exists(sourcePackageContents))
+                        return Fail("PackageContents.xml not found.");
 
-                WriteStatus("Bundle", $"Installed to {destinationBundle}", ConsoleColor.Green);
+                    Directory.CreateDirectory(applicationPluginsRoot);
+
+                    if (Directory.Exists(destinationBundle))
+                        Directory.Delete(destinationBundle, recursive: true);
+
+                    CopyDirectory(sourceBundle, destinationBundle);
+                    File.Copy(sourcePackageContents, Path.Combine(destinationBundle, "PackageContents.xml"), overwrite: true);
+
+                    WriteStatus("Bundle", $"Installed to {destinationBundle}", ConsoleColor.Green);
+                }
                 
                 // Register in Windows Programs & Features
                 RegisterInControlPanel(destinationBundle);
@@ -84,6 +88,57 @@ internal static class Program
         Console.ReadKey(intercept: true);
 
         return 0;
+    }
+
+    private static bool TryExtractEmbeddedBundle(string applicationPluginsRoot, string destinationBundle)
+    {
+        try
+        {
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            var resourceName = assembly.GetManifestResourceNames()
+                .FirstOrDefault(r => r.EndsWith("bundle.zip", StringComparison.OrdinalIgnoreCase));
+
+            if (resourceName == null)
+                return false;
+
+            WriteStatus("Extracting", "Embedded bundle...", ConsoleColor.Yellow);
+
+            Directory.CreateDirectory(applicationPluginsRoot);
+
+            if (Directory.Exists(destinationBundle))
+                Directory.Delete(destinationBundle, recursive: true);
+
+            using var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream == null)
+                return false;
+
+            // Extract ZIP directly to ApplicationPlugins
+            // The ZIP contains "RevitCommandRunner.bundle" folder with PackageContents.xml inside
+            string tempZip = Path.Combine(Path.GetTempPath(), "RevitCommandRunner-bundle.zip");
+            using (var fileStream = File.Create(tempZip))
+            {
+                stream.CopyTo(fileStream);
+            }
+
+            // Extract ZIP - it will create ApplicationPlugins/RevitCommandRunner.bundle/
+            System.IO.Compression.ZipFile.ExtractToDirectory(tempZip, applicationPluginsRoot, overwriteFiles: true);
+            File.Delete(tempZip);
+
+            // Verify extraction
+            if (!Directory.Exists(destinationBundle))
+            {
+                WriteStatus("Error", "Bundle extraction failed", ConsoleColor.Red);
+                return false;
+            }
+
+            WriteStatus("Bundle", $"Installed to {destinationBundle}", ConsoleColor.Green);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            WriteStatus("Error", $"Extraction failed: {ex.Message}", ConsoleColor.Red);
+            return false;
+        }
     }
 
     private static void RegisterInControlPanel(string installPath)
