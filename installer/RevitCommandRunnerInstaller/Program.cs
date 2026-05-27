@@ -38,6 +38,7 @@ internal static class Program
         private readonly bool _uninstall;
         private readonly ListBox _log = new();
         private readonly CheckBox _claudeCode = new() { Content = "Claude Code", IsChecked = true };
+        private readonly CheckBox _claudeDesktop = new() { Content = "Claude Desktop", IsChecked = true };
         private readonly CheckBox _openCode = new() { Content = "OpenCode", IsChecked = true };
         private readonly CheckBox _antigravity = new() { Content = "Antigravity", IsChecked = true };
         private readonly Button _primary = new() { Width = 110, Height = 30 };
@@ -76,6 +77,7 @@ internal static class Program
                 var checks = new StackPanel { Margin = new Thickness(10) };
                 checks.Children.Add(new TextBlock { Text = "Selected clients will receive or update the revit-command-runner MCP config.", Margin = new Thickness(0, 0, 0, 8) });
                 checks.Children.Add(_claudeCode);
+                checks.Children.Add(_claudeDesktop);
                 checks.Children.Add(_openCode);
                 checks.Children.Add(_antigravity);
                 mcpBox.Content = checks;
@@ -146,6 +148,10 @@ internal static class Program
             if (_claudeCode.IsChecked == true)
             {
                 TryConfigureClient("Claude Code", UpsertClaudeCode);
+            }
+            if (_claudeDesktop.IsChecked == true)
+            {
+                TryConfigureClient("Claude Desktop", UpsertClaudeDesktop);
             }
             if (_openCode.IsChecked == true)
             {
@@ -324,6 +330,15 @@ internal static class Program
         };
     }
 
+    private static JsonObject BuildClaudeDesktopServerNode()
+    {
+        return new JsonObject
+        {
+            ["command"] = "node",
+            ["args"] = new JsonArray(InstalledMcpServerPath())
+        };
+    }
+
     private static JsonObject LoadJsonObject(string path, bool jsonc)
     {
         if (!File.Exists(path)) return new JsonObject();
@@ -367,6 +382,15 @@ internal static class Program
         var root = LoadJsonObject(path, jsonc: true);
         var mcp = EnsureObject(root, "mcp");
         mcp["revit-command-runner"] = BuildOpenCodeServerNode();
+        SaveJson(path, root);
+    }
+
+    private static void UpsertClaudeDesktop()
+    {
+        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Claude", "claude_desktop_config.json");
+        var root = LoadJsonObject(path, jsonc: true);
+        var mcpServers = EnsureObject(root, "mcpServers");
+        mcpServers["revit-command-runner"] = BuildClaudeDesktopServerNode();
         SaveJson(path, root);
     }
 

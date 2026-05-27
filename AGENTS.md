@@ -35,6 +35,7 @@
 
 - The WPF installer updates existing `revit-command-runner` entries instead of duplicating them and preserves unrelated MCP servers.
 - Claude Code global config goes in top-level `%USERPROFILE%\.claude.json -> mcpServers`; do not write under `projects` for this global Revit tool.
+- Claude Desktop config goes in `%APPDATA%\Claude\claude_desktop_config.json -> mcpServers` and uses `command` plus `args`, without `type`.
 - Claude Code and OpenCode should receive the fully expanded installed MCP path (`C:/Users/.../AppData/Roaming/.../index.js`), not `%APPDATA%`.
 - OpenCode schema is `mcp.revit-command-runner = { "type": "local", "command": ["node", "<path>"], "enabled": true }`; it does not use `args`.
 - Antigravity schema needs the `cmd /c` wrapper so `%APPDATA%` expands: `command: "cmd"`, `args: ["/c", "node", "%APPDATA%\\Autodesk\\ApplicationPlugins\\RevitCommandRunner.bundle\\mcp-server\\index.js"]`.

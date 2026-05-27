@@ -39,6 +39,7 @@ The installer places the bundle here:
 After installing the bundle, it shows a WPF checkbox dialog for MCP client configuration. All clients are checked by default:
 
 - Claude Code
+- Claude Desktop
 - OpenCode
 - Antigravity
 

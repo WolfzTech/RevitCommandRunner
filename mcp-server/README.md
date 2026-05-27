@@ -64,11 +64,13 @@ Add to your Claude Desktop config file:
   "mcpServers": {
     "revit-command-runner": {
       "command": "node",
-      "args": ["D:/RevitCommandRunner/mcp-server/dist/index.js"]
+      "args": ["C:/Users/YourName/AppData/Roaming/Autodesk/ApplicationPlugins/RevitCommandRunner.bundle/mcp-server/index.js"]
     }
   }
 }
 ```
+
+**Note**: Replace `YourName` with your Windows username.
 
 ### For Claude Code
 
