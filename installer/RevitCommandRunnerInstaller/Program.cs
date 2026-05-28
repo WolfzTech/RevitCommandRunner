@@ -41,6 +41,7 @@ internal static class Program
         private readonly CheckBox _claudeDesktop = new() { Content = "Claude Desktop", IsChecked = true };
         private readonly CheckBox _openCode = new() { Content = "OpenCode", IsChecked = true };
         private readonly CheckBox _antigravity = new() { Content = "Antigravity", IsChecked = true };
+        private readonly CheckBox _cursor = new() { Content = "Cursor", IsChecked = true };
         private readonly Button _primary = new() { Width = 110, Height = 30 };
         private readonly Button _close = new() { Content = "Close", Width = 90, Height = 30, IsEnabled = true };
 
@@ -80,6 +81,7 @@ internal static class Program
                 checks.Children.Add(_claudeDesktop);
                 checks.Children.Add(_openCode);
                 checks.Children.Add(_antigravity);
+                checks.Children.Add(_cursor);
                 mcpBox.Content = checks;
                 Grid.SetRow(mcpBox, 1);
                 root.Children.Add(mcpBox);
@@ -160,6 +162,10 @@ internal static class Program
             if (_antigravity.IsChecked == true)
             {
                 TryConfigureClient("Antigravity", UpsertAntigravity);
+            }
+            if (_cursor.IsChecked == true)
+            {
+                TryConfigureClient("Cursor", UpsertCursor);
             }
         }
 
@@ -400,6 +406,15 @@ internal static class Program
         var root = LoadJsonObject(path, jsonc: true);
         var mcpServers = EnsureObject(root, "mcpServers");
         mcpServers["revit-command-runner"] = BuildAntigravityServerNode();
+        SaveJson(path, root);
+    }
+
+    private static void UpsertCursor()
+    {
+        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cursor", "mcp.json");
+        var root = LoadJsonObject(path, jsonc: true);
+        var mcpServers = EnsureObject(root, "mcpServers");
+        mcpServers["revit-command-runner"] = BuildClaudeDesktopServerNode();
         SaveJson(path, root);
     }
 }

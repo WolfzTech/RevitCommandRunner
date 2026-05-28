@@ -39,4 +39,5 @@
 - Claude Code and OpenCode should receive the fully expanded installed MCP path (`C:/Users/.../AppData/Roaming/.../index.js`), not `%APPDATA%`.
 - OpenCode schema is `mcp.revit-command-runner = { "type": "local", "command": ["node", "<path>"], "enabled": true }`; it does not use `args`.
 - Antigravity schema needs the `cmd /c` wrapper so `%APPDATA%` expands: `command: "cmd"`, `args: ["/c", "node", "%APPDATA%\\Autodesk\\ApplicationPlugins\\RevitCommandRunner.bundle\\mcp-server\\index.js"]`.
+- Cursor config goes in `%USERPROFILE%\.cursor\mcp.json` and uses the same format as Claude Desktop (`command` plus `args`, without `type`).
 - Config parsing allows comments/trailing commas, but structurally malformed JSON is skipped per client so installation can still complete.

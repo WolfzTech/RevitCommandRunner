@@ -42,6 +42,7 @@ After installing the bundle, it shows a WPF checkbox dialog for MCP client confi
 - Claude Desktop
 - OpenCode
 - Antigravity
+- Cursor
 
 The installer creates or updates the relevant MCP config entry. Existing unrelated MCP servers are preserved. If `revit-command-runner` already exists, it is updated instead of duplicated.
 
