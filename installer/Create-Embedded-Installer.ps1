@@ -94,7 +94,7 @@ if ($csproj -notmatch '<EmbeddedResource Include="Resources\\bundle.zip"') {
 
 try {
     Write-Host "Step 5: Building installer..." -ForegroundColor Yellow
-    dotnet publish $installerProjectPath -c Release -r win-x64 --self-contained true -o "$PSScriptRoot\bin" | Out-Null
+    dotnet publish $installerProjectPath -c Release -r win-x64 -o "$PSScriptRoot\bin" | Out-Null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Build failed" -ForegroundColor Red
         exit 1

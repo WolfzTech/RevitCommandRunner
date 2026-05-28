@@ -56,11 +56,17 @@ All clients point to the bundled MCP server:
 
 ## Requirements
 
+### End Users (Running Installer)
 - Windows
 - Autodesk Revit 2021-2027
-- .NET SDK for building
-- Node.js 18+ and npm for building the MCP server
-- PowerShell 7+ (`pwsh`) for the release scripts
+- [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (x64)
+
+### Developers (Building from Source)
+- Windows
+- Autodesk Revit 2021-2027
+- .NET SDK 8.0+
+- Node.js 18+ and npm
+- PowerShell 7+ (`pwsh`)
 
 ## Development Build Steps
 

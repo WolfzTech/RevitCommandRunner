@@ -10,7 +10,6 @@
     <RootNamespace>RevitCommandRunnerInstaller</RootNamespace>
     <Version>1.0.0</Version>
     <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>true</SelfContained>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <SelfContained>false</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup></Project>
