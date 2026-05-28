@@ -15,16 +15,30 @@ namespace RevitCommandRunner.Utils
     internal sealed class CollectibleAssemblyLoadContext : AssemblyLoadContext
     {
         private readonly AssemblyDependencyResolver _resolver;
+        private readonly string _pluginDirectory;
 
         public CollectibleAssemblyLoadContext(string pluginPath) : base(isCollectible: true)
         {
             _resolver = new AssemblyDependencyResolver(pluginPath);
+            _pluginDirectory = Path.GetDirectoryName(pluginPath) ?? "";
         }
 
         protected override Assembly? Load(AssemblyName assemblyName)
         {
+            // First try the dependency resolver (uses .deps.json)
             string? assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
-            return assemblyPath == null ? null : LoadFromAssemblyPath(assemblyPath);
+            if (assemblyPath != null)
+                return LoadFromAssemblyPath(assemblyPath);
+
+            // Fallback: probe the plugin directory for the DLL
+            // This handles dependencies like Xbim.Ifc that aren't in .deps.json
+            string fileName = assemblyName.Name + ".dll";
+            string localPath = Path.Combine(_pluginDirectory, fileName);
+            if (File.Exists(localPath))
+                return LoadFromAssemblyPath(localPath);
+
+            // Not found - let default resolution handle it
+            return null;
         }
 
         protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
